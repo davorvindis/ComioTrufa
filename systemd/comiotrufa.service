@@ -1,0 +1,18 @@
+[Unit]
+Description=ComioTrufa - Monitor de plato de comida para perrita
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/comiotrufa
+EnvironmentFile=/home/pi/comiotrufa/.env
+ExecStart=/home/pi/comiotrufa/venv/bin/python -m comiotrufa.main
+Restart=always
+RestartSec=30
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

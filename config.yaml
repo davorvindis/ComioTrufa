@@ -1,0 +1,36 @@
+# ComioTrufa - Configuración
+# Monitor de plato de comida para perrita
+
+camera:
+  resolution: [1280, 720]
+  rotation: 0
+  image_quality: 70
+  images_dir: "images"
+  keep_images_days: 7
+
+monitor:
+  interval_minutes: 5
+  debounce_readings: 2
+
+claude:
+  # Set via environment variable ANTHROPIC_API_KEY
+  model: "claude-sonnet-4-20250514"
+  max_tokens: 200
+  timeout_seconds: 30
+
+telegram:
+  # Set via environment variables:
+  # TELEGRAM_BOT_TOKEN
+  # TELEGRAM_CHAT_ID
+  notify_on_eat: true
+  notify_on_refill: false
+  empty_reminder_hours: 8
+
+database:
+  path: "comiotrufa.db"
+
+logging:
+  level: "INFO"
+  file: "logs/comiotrufa.log"
+  max_size_mb: 10
+  backup_count: 3

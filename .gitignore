@@ -1,0 +1,16 @@
+# Secrets
+.env
+
+# Python
+__pycache__/
+*.pyc
+venv/
+
+# App data
+*.db
+images/
+logs/
+
+# IDE
+.vscode/
+.idea/
