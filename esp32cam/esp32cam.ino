@@ -92,7 +92,24 @@ void setup() {
   // Conectar WiFi
   connectWiFi();
 
+  // Configurar hora Argentina (UTC-3)
+  configTime(-3 * 3600, 0, "pool.ntp.org", "time.nist.gov");
+  Serial.print("Sincronizando hora...");
+  struct tm timeinfo;
+  int retries = 0;
+  while (!getLocalTime(&timeinfo) && retries < 10) {
+    delay(500);
+    Serial.print(".");
+    retries++;
+  }
+  if (retries < 10) {
+    Serial.printf(" OK: %02d:%02d:%02d\n", timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec);
+  } else {
+    Serial.println(" WARN: no se pudo sincronizar hora");
+  }
+
   Serial.printf("Intervalo: %d minutos\n", INTERVAL_MINUTES);
+  Serial.println("Horario activo: 7:00 - 1:00 (duerme 1:00-7:00)");
   Serial.println("Setup completo. Iniciando monitoreo...\n");
 }
 
@@ -101,6 +118,17 @@ void loop() {
   if (WiFi.status() != WL_CONNECTED) {
     Serial.println("WiFi desconectado. Reconectando...");
     connectWiFi();
+  }
+
+  // Chequear si estamos en horario nocturno (1:00 - 7:00 = no capturar)
+  struct tm timeinfo;
+  if (getLocalTime(&timeinfo)) {
+    int hour = timeinfo.tm_hour;
+    if (hour >= 1 && hour < 7) {
+      Serial.printf("Horario nocturno (%02d:%02d), saltando...\n", hour, timeinfo.tm_min);
+      delay(INTERVAL_MINUTES * 60 * 1000UL);
+      return;
+    }
   }
 
   // Capturar y enviar foto
@@ -239,19 +267,18 @@ bool captureAndSend() {
 
   // Encender flash LED para iluminar el plato
   digitalWrite(FLASH_LED_PIN, HIGH);
-  delay(300);  // Dar tiempo a la cámara para ajustar exposición
+  delay(500);  // Dar tiempo a la cámara para ajustar exposición
 
-  // Descartar primer frame (exposición incorrecta)
+  // Descartar frames viejos para que el sensor se adapte a la luz
   camera_fb_t *fb = esp_camera_fb_get();
-  if (fb) {
-    esp_camera_fb_return(fb);
-    delay(200);
-  }
+  if (fb) { esp_camera_fb_return(fb); delay(300); }
+  fb = esp_camera_fb_get();
+  if (fb) { esp_camera_fb_return(fb); delay(300); }
 
-  // Capturar frame bueno (con flash)
+  // Capturar frame bueno (con flash encendido)
   fb = esp_camera_fb_get();
 
-  // Apagar flash inmediatamente
+  // Apagar flash
   digitalWrite(FLASH_LED_PIN, LOW);
 
   if (!fb) {

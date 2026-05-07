@@ -7,9 +7,18 @@ import asyncio
 import base64
 import json
 import logging
+import os
 from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
+
+# Forzar timezone Argentina
+os.environ["TZ"] = "America/Argentina/Buenos_Aires"
+try:
+    import time
+    time.tzset()
+except AttributeError:
+    pass  # Windows no tiene tzset
 
 from fastapi import FastAPI, Request, Response
 from fastapi.responses import FileResponse, HTMLResponse
