@@ -153,6 +153,55 @@
             font-style: italic;
         }
 
+        /* Lightbox zoom */
+        .lightbox {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.9);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            padding: 20px;
+        }
+        .lightbox.open { display: flex; }
+        .lightbox img {
+            max-width: 95vw;
+            max-height: 80vh;
+            object-fit: contain;
+            border-radius: 8px;
+        }
+        .lightbox .lb-info {
+            color: #ccc;
+            margin-top: 10px;
+            text-align: center;
+            font-size: 14px;
+        }
+        .lightbox .lb-close {
+            position: absolute;
+            top: 16px; right: 20px;
+            font-size: 32px;
+            color: white;
+            cursor: pointer;
+            background: none;
+            border: none;
+        }
+        .lightbox .lb-nav {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 36px;
+            color: white;
+            cursor: pointer;
+            background: none;
+            border: none;
+            padding: 20px;
+        }
+        .lightbox .lb-prev { left: 4px; }
+        .lightbox .lb-next { right: 4px; }
+        .photo-card { cursor: pointer; }
+
         /* Events list */
         .events-list { display: flex; flex-direction: column; gap: 6px; }
         .event-item {
@@ -247,11 +296,50 @@
         </div>
     </div>
 
+    <div class="lightbox" id="lightbox" onclick="closeLightbox(event)">
+        <button class="lb-close" onclick="closeLightbox()">&times;</button>
+        <button class="lb-nav lb-prev" onclick="lbNav(-1)">&lsaquo;</button>
+        <button class="lb-nav lb-next" onclick="lbNav(1)">&rsaquo;</button>
+        <img id="lbImg" src="" alt="">
+        <div class="lb-info" id="lbInfo"></div>
+    </div>
+
     <div class="footer">Se actualiza cada 30s</div>
 
     <script>
         let currentDate = new Date();
         const today = new Date();
+        let currentPhotos = [];
+        let lbIndex = 0;
+
+        function openLightbox(index) {
+            lbIndex = index;
+            const r = currentPhotos[index];
+            document.getElementById('lbImg').src = r.image_url;
+            document.getElementById('lbInfo').textContent =
+                `${formatTime(r.timestamp)} - ${stateText(r.state)} (${(r.confidence*100).toFixed(0)}%)`;
+            document.getElementById('lightbox').classList.add('open');
+        }
+
+        function closeLightbox(e) {
+            if (e && e.target !== e.currentTarget && !e.target.classList.contains('lb-close')) return;
+            document.getElementById('lightbox').classList.remove('open');
+        }
+
+        function lbNav(dir) {
+            lbIndex = (lbIndex + dir + currentPhotos.length) % currentPhotos.length;
+            const r = currentPhotos[lbIndex];
+            document.getElementById('lbImg').src = r.image_url;
+            document.getElementById('lbInfo').textContent =
+                `${formatTime(r.timestamp)} - ${stateText(r.state)} (${(r.confidence*100).toFixed(0)}%)`;
+        }
+
+        document.addEventListener('keydown', e => {
+            if (!document.getElementById('lightbox').classList.contains('open')) return;
+            if (e.key === 'Escape') closeLightbox();
+            if (e.key === 'ArrowLeft') lbNav(-1);
+            if (e.key === 'ArrowRight') lbNav(1);
+        });
 
         function dateStr(d) {
             return d.toISOString().split('T')[0];
@@ -355,11 +443,12 @@
                     return;
                 }
 
-                grid.innerHTML = readings.map(r => {
+                currentPhotos = readings;
+                grid.innerHTML = readings.map((r, i) => {
                     let desc = '';
                     try { desc = JSON.parse(r.raw_response || '{}').description || ''; } catch(e) {}
                     return `
-                        <div class="photo-card">
+                        <div class="photo-card" onclick="openLightbox(${i})">
                             <img src="${r.image_url}" alt="bowl" loading="lazy"
                                  onerror="this.style.background='#16213e';this.style.height='80px'">
                             <div class="info">

@@ -237,15 +237,23 @@ bool checkPhotoRequest() {
 bool captureAndSend() {
   Serial.println("Capturando foto...");
 
-  // Descartar primer frame (puede tener exposición incorrecta)
+  // Encender flash LED para iluminar el plato
+  digitalWrite(FLASH_LED_PIN, HIGH);
+  delay(300);  // Dar tiempo a la cámara para ajustar exposición
+
+  // Descartar primer frame (exposición incorrecta)
   camera_fb_t *fb = esp_camera_fb_get();
   if (fb) {
     esp_camera_fb_return(fb);
     delay(200);
   }
 
-  // Capturar frame bueno
+  // Capturar frame bueno (con flash)
   fb = esp_camera_fb_get();
+
+  // Apagar flash inmediatamente
+  digitalWrite(FLASH_LED_PIN, LOW);
+
   if (!fb) {
     Serial.println("ERROR: No se pudo capturar la foto");
     return false;
