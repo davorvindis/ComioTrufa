@@ -4,12 +4,15 @@ Run with: uvicorn server.app:app --host 0.0.0.0 --port 8000
 """
 
 import asyncio
+import json
 import logging
 from contextlib import asynccontextmanager
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 
 from fastapi import FastAPI, Request, Response
+from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.staticfiles import StaticFiles
 
 from comiotrufa.config import load_config
 from comiotrufa.database import Database
@@ -31,6 +34,7 @@ state_machine = None
 vision = None
 bot = None
 reminder_task = None
+photo_requested = False  # Flag for on-demand photo requests
 
 
 @asynccontextmanager
@@ -79,6 +83,8 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="ComioTrufa", lifespan=lifespan)
 
 
+# ─── ESP32-CAM Endpoint ──────────────────────────────────────
+
 @app.post("/api/photo")
 async def receive_photo(request: Request):
     """Receive a JPEG photo from ESP32-CAM and process it."""
@@ -98,7 +104,7 @@ async def receive_photo(request: Request):
     filepath = Path(config.camera.images_dir) / filename
     filepath.write_bytes(body)
 
-    # Analyze with Claude Vision
+    # Analyze with Vision API
     result = vision.analyze(str(filepath))
     if result is None:
         logger.warning("Vision analysis failed")
@@ -145,14 +151,35 @@ async def receive_photo(request: Request):
     # Periodic cleanup
     db.cleanup_old_images(config.camera.keep_images_days, config.camera.images_dir)
 
-    import json
     return Response(content=json.dumps(response_data), media_type="application/json")
+
+
+# ─── API Endpoints for Frontend ──────────────────────────────
+
+@app.post("/api/request-photo")
+async def request_photo():
+    """Request the ESP32 to send a photo on its next check-in."""
+    global photo_requested
+    photo_requested = True
+    return Response(content='{"status":"requested"}', media_type="application/json")
+
+
+@app.get("/api/should-capture")
+async def should_capture():
+    """ESP32 polls this to know if it should send a photo immediately."""
+    global photo_requested
+    should = photo_requested
+    if photo_requested:
+        photo_requested = False
+    return Response(
+        content=json.dumps({"capture": should}),
+        media_type="application/json",
+    )
 
 
 @app.get("/api/status")
 async def get_status():
-    """Get current bowl status (useful for debugging)."""
-    import json
+    """Get current bowl status."""
     reading = db.get_last_reading()
     last_eat = db.get_last_eat_time()
     return Response(
@@ -163,6 +190,62 @@ async def get_status():
         }),
         media_type="application/json",
     )
+
+
+@app.get("/api/readings")
+async def get_readings(limit: int = 50):
+    """Get recent readings with photos."""
+    rows = db.conn.execute(
+        "SELECT * FROM readings ORDER BY timestamp DESC LIMIT ?", (limit,)
+    ).fetchall()
+    readings = [dict(r) for r in rows]
+    # Convert image paths to URLs
+    for r in readings:
+        if r.get("image_path"):
+            r["image_url"] = f"/images/{Path(r['image_path']).name}"
+    return Response(content=json.dumps(readings), media_type="application/json")
+
+
+@app.get("/api/events")
+async def get_events(limit: int = 50):
+    """Get recent events."""
+    events = db.get_recent_events(limit=limit)
+    for e in events:
+        if e.get("image_path"):
+            e["image_url"] = f"/images/{Path(e['image_path']).name}"
+    return Response(content=json.dumps(events), media_type="application/json")
+
+
+@app.get("/api/today")
+async def get_today():
+    """Get today's stats."""
+    stats = db.get_today_stats()
+    return Response(content=json.dumps(stats), media_type="application/json")
+
+
+@app.get("/api/week")
+async def get_week():
+    """Get week stats."""
+    stats = db.get_week_stats()
+    return Response(content=json.dumps(stats), media_type="application/json")
+
+
+@app.get("/images/{filename}")
+async def serve_image(filename: str):
+    """Serve captured images."""
+    filepath = Path(config.camera.images_dir) / filename
+    if not filepath.exists():
+        return Response(content="Not found", status_code=404)
+    return FileResponse(filepath, media_type="image/jpeg")
+
+
+# ─── Frontend ────────────────────────────────────────────────
+
+@app.get("/")
+async def index():
+    """Serve the frontend."""
+    html_path = Path(__file__).parent / "index.html"
+    return HTMLResponse(html_path.read_text())
 
 
 @app.get("/health")

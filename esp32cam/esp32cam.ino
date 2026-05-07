@@ -22,11 +22,12 @@
 // ============ CONFIGURACIÓN - EDITAR AQUÍ ============
 
 // WiFi
-const char* WIFI_SSID = "TU_WIFI_NOMBRE";
-const char* WIFI_PASSWORD = "TU_WIFI_CLAVE";
+const char* WIFI_SSID = "Personal-MD-2.4";
+const char* WIFI_PASSWORD = "TRUFA401";
 
 // Servidor (tu PC o servidor en la nube)
-const char* SERVER_URL = "http://192.168.1.100:8000/api/photo";
+const char* SERVER_URL = "http://192.168.0.247:8000/api/photo";
+const char* CHECK_URL = "http://192.168.0.247:8000/api/should-capture";
 
 // Intervalo entre fotos (en minutos)
 const int INTERVAL_MINUTES = 5;
@@ -118,11 +119,18 @@ void loop() {
     }
   }
 
-  // Dormir hasta la próxima captura (deep sleep ahorra energía)
-  Serial.printf("Durmiendo %d minutos...\n", INTERVAL_MINUTES);
+  // Esperar hasta la próxima captura, pero chequear pedidos cada 10 seg
+  Serial.printf("Esperando %d minutos (chequeando pedidos cada 10s)...\n", INTERVAL_MINUTES);
 
-  // Usar delay simple (deep sleep pierde conexión WiFi)
-  delay(INTERVAL_MINUTES * 60 * 1000UL);
+  unsigned long waitMs = INTERVAL_MINUTES * 60 * 1000UL;
+  unsigned long start = millis();
+  while (millis() - start < waitMs) {
+    delay(10000);  // Chequear cada 10 segundos
+    if (checkPhotoRequest()) {
+      Serial.println("Foto pedida desde el front!");
+      captureAndSend();
+    }
+  }
 }
 
 bool initCamera() {
@@ -203,6 +211,24 @@ void connectWiFi() {
     delay(10000);
     ESP.restart();
   }
+}
+
+bool checkPhotoRequest() {
+  if (WiFi.status() != WL_CONNECTED) return false;
+
+  HTTPClient http;
+  http.begin(CHECK_URL);
+  http.setTimeout(5000);
+  int httpCode = http.GET();
+
+  if (httpCode == 200) {
+    String response = http.getString();
+    http.end();
+    return response.indexOf("true") > 0;
+  }
+
+  http.end();
+  return false;
 }
 
 bool captureAndSend() {

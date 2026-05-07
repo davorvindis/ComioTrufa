@@ -13,8 +13,8 @@ monitor:
   debounce_readings: 2
 
 claude:
-  # Set via environment variable ANTHROPIC_API_KEY
-  model: "claude-sonnet-4-20250514"
+  # Set via environment variable OPENAI_API_KEY
+  model: "gpt-4o-mini"
   max_tokens: 200
   timeout_seconds: 30
 

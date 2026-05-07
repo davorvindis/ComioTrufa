@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ComioTrufa</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #1a1a2e;
+            color: #eee;
+            min-height: 100vh;
+        }
+        header {
+            background: #16213e;
+            padding: 20px;
+            text-align: center;
+            border-bottom: 3px solid #e94560;
+        }
+        header h1 { font-size: 28px; }
+        header h1 span { color: #e94560; }
+        .status-bar {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            padding: 20px;
+            background: #0f3460;
+            flex-wrap: wrap;
+        }
+        .status-card {
+            background: #16213e;
+            border-radius: 12px;
+            padding: 16px 24px;
+            text-align: center;
+            min-width: 160px;
+        }
+        .status-card .label { font-size: 12px; color: #888; text-transform: uppercase; }
+        .status-card .value { font-size: 24px; font-weight: bold; margin-top: 4px; }
+        .status-card .value.food { color: #4ade80; }
+        .status-card .value.empty { color: #f87171; }
+        .status-card .value.unknown { color: #fbbf24; }
+
+        .tabs {
+            display: flex;
+            justify-content: center;
+            gap: 0;
+            background: #16213e;
+        }
+        .tab {
+            padding: 12px 24px;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            color: #888;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .tab:hover { color: #ccc; }
+        .tab.active { color: #e94560; border-bottom-color: #e94560; }
+
+        .content { max-width: 1000px; margin: 0 auto; padding: 20px; }
+
+        /* Photos grid */
+        .photos-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 16px;
+        }
+        .photo-card {
+            background: #16213e;
+            border-radius: 12px;
+            overflow: hidden;
+            transition: transform 0.2s;
+        }
+        .photo-card:hover { transform: scale(1.02); }
+        .photo-card img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+        }
+        .photo-card .info {
+            padding: 12px;
+        }
+        .photo-card .info .time { font-size: 13px; color: #888; }
+        .photo-card .info .state-badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-top: 6px;
+        }
+        .state-badge.food { background: #166534; color: #4ade80; }
+        .state-badge.empty { background: #7f1d1d; color: #f87171; }
+        .state-badge.unknown { background: #713f12; color: #fbbf24; }
+        .photo-card .info .confidence {
+            font-size: 12px;
+            color: #666;
+            margin-top: 4px;
+        }
+        .photo-card .info .description {
+            font-size: 13px;
+            color: #aaa;
+            margin-top: 6px;
+            font-style: italic;
+        }
+
+        /* Events list */
+        .events-list { display: flex; flex-direction: column; gap: 8px; }
+        .event-item {
+            background: #16213e;
+            border-radius: 8px;
+            padding: 14px 18px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+        .event-item .emoji { font-size: 28px; }
+        .event-item .details { flex: 1; }
+        .event-item .details .action { font-weight: 600; font-size: 15px; }
+        .event-item .details .time { font-size: 13px; color: #888; margin-top: 2px; }
+        .event-item .thumb {
+            width: 60px;
+            height: 60px;
+            border-radius: 8px;
+            object-fit: cover;
+        }
+
+        /* Stats */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 12px;
+        }
+        .stat-card {
+            background: #16213e;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+        }
+        .stat-card .day { font-size: 14px; color: #888; }
+        .stat-card .meals { font-size: 36px; font-weight: bold; color: #4ade80; margin: 8px 0; }
+        .stat-card .times { font-size: 12px; color: #666; }
+
+        .hidden { display: none; }
+        .empty-msg { text-align: center; color: #666; padding: 40px; font-size: 16px; }
+        .auto-refresh { text-align: center; padding: 10px; color: #555; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>ComioTrufa <span>🐕</span></h1>
+    </header>
+
+    <div class="status-bar" id="statusBar">
+        <div class="status-card">
+            <div class="label">Estado del plato</div>
+            <div class="value" id="currentState">...</div>
+        </div>
+        <div class="status-card">
+            <div class="label">Ultima lectura</div>
+            <div class="value" id="lastReading" style="font-size:16px">...</div>
+        </div>
+        <div class="status-card">
+            <div class="label">Ultima comida</div>
+            <div class="value" id="lastEat" style="font-size:16px">...</div>
+        </div>
+        <div class="status-card">
+            <div class="label">Hoy</div>
+            <div class="value" id="todayMeals">...</div>
+        </div>
+    </div>
+
+    <div class="tabs">
+        <div class="tab active" onclick="showTab('photos')">Fotos</div>
+        <div class="tab" onclick="showTab('events')">Eventos</div>
+        <div class="tab" onclick="showTab('stats')">Semana</div>
+    </div>
+
+    <div class="content">
+        <div id="tab-photos">
+            <div style="display:flex;gap:10px;margin-bottom:16px;justify-content:center;flex-wrap:wrap">
+                <button onclick="requestPhoto()" id="btnRequestPhoto" style="background:#e94560;color:white;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;font-size:14px;font-weight:600">Pedir foto ahora</button>
+                <button onclick="loadPhotos()" style="background:#0f3460;color:white;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;font-size:14px">Actualizar</button>
+            </div>
+            <div id="photoRequest" class="hidden" style="text-align:center;padding:10px;color:#fbbf24;font-size:14px"></div>
+            <div class="photos-grid" id="photosGrid"></div>
+        </div>
+        <div id="tab-events" class="hidden">
+            <div class="events-list" id="eventsList"></div>
+        </div>
+        <div id="tab-stats" class="hidden">
+            <div class="stats-grid" id="statsGrid"></div>
+        </div>
+    </div>
+
+    <div class="auto-refresh">Se actualiza cada 30 segundos</div>
+
+    <script>
+        async function fetchJSON(url) {
+            const res = await fetch(url);
+            return res.json();
+        }
+
+        function formatTime(ts) {
+            if (!ts) return 'N/A';
+            const d = new Date(ts.replace(' ', 'T'));
+            return d.toLocaleString('es-AR', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' });
+        }
+
+        function stateText(state) {
+            if (state === 'food') return 'Con comida';
+            if (state === 'empty') return 'Vacio';
+            return 'Desconocido';
+        }
+
+        async function loadStatus() {
+            const [status, today] = await Promise.all([
+                fetchJSON('/api/status'),
+                fetchJSON('/api/today'),
+            ]);
+
+            const stateEl = document.getElementById('currentState');
+            const state = status.current_state || 'unknown';
+            stateEl.textContent = stateText(state);
+            stateEl.className = 'value ' + state;
+
+            const reading = status.last_reading;
+            document.getElementById('lastReading').textContent = reading ? formatTime(reading.timestamp) : 'Sin datos';
+            document.getElementById('lastEat').textContent = status.last_eat_time ? formatTime(status.last_eat_time) : 'Sin datos';
+            document.getElementById('todayMeals').textContent = today.meals_detected + ' comida(s)';
+        }
+
+        async function loadPhotos() {
+            const readings = await fetchJSON('/api/readings?limit=30');
+            const grid = document.getElementById('photosGrid');
+
+            if (readings.length === 0) {
+                grid.innerHTML = '<div class="empty-msg">Sin fotos todavia. Esperando a la ESP32-CAM...</div>';
+                return;
+            }
+
+            grid.innerHTML = readings.map(r => {
+                let desc = '';
+                try { desc = JSON.parse(r.raw_response || '{}').description || ''; } catch(e) {}
+                return `
+                    <div class="photo-card">
+                        <img src="${r.image_url}" alt="bowl" loading="lazy" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 1 1%22><rect fill=%22%2316213e%22 width=%221%22 height=%221%22/></svg>'">
+                        <div class="info">
+                            <div class="time">${formatTime(r.timestamp)}</div>
+                            <span class="state-badge ${r.state}">${stateText(r.state)}</span>
+                            <span style="font-size:12px;color:#666;margin-left:8px">${(r.confidence * 100).toFixed(0)}%</span>
+                            ${desc ? `<div class="description">"${desc}"</div>` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function loadEvents() {
+            const events = await fetchJSON('/api/events?limit=30');
+            const list = document.getElementById('eventsList');
+
+            if (events.length === 0) {
+                list.innerHTML = '<div class="empty-msg">Sin eventos todavia</div>';
+                return;
+            }
+
+            list.innerHTML = events.map(e => {
+                const isAte = e.event_type === 'dog_ate';
+                const emoji = isAte ? '🐕' : '🍽️';
+                const action = isAte ? 'Trufa comio!' : 'Plato rellenado';
+                const imgHtml = e.image_url ? `<img class="thumb" src="${e.image_url}" alt="">` : '';
+                return `
+                    <div class="event-item">
+                        <div class="emoji">${emoji}</div>
+                        <div class="details">
+                            <div class="action">${action}</div>
+                            <div class="time">${formatTime(e.timestamp)} - Confianza: ${(e.confidence * 100).toFixed(0)}%</div>
+                        </div>
+                        ${imgHtml}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function loadStats() {
+            const stats = await fetchJSON('/api/week');
+            const grid = document.getElementById('statsGrid');
+
+            if (stats.length === 0) {
+                grid.innerHTML = '<div class="empty-msg">Sin datos de la semana</div>';
+                return;
+            }
+
+            grid.innerHTML = stats.map(s => `
+                <div class="stat-card">
+                    <div class="day">${s.date}</div>
+                    <div class="meals">${s.meals_detected}</div>
+                    <div class="times">
+                        Primera: ${s.first_meal_time || '--:--'}<br>
+                        Ultima: ${s.last_meal_time || '--:--'}<br>
+                        Rellenados: ${s.refills}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function showTab(name) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.content > div').forEach(d => d.classList.add('hidden'));
+            document.getElementById('tab-' + name).classList.remove('hidden');
+            event.target.classList.add('active');
+
+            if (name === 'photos') loadPhotos();
+            if (name === 'events') loadEvents();
+            if (name === 'stats') loadStats();
+        }
+
+        async function requestPhoto() {
+            const btn = document.getElementById('btnRequestPhoto');
+            const msg = document.getElementById('photoRequest');
+            btn.disabled = true;
+            btn.textContent = 'Pidiendo...';
+            msg.classList.remove('hidden');
+            msg.textContent = 'Solicitando foto a la ESP32-CAM... (llega en el proximo ciclo, ~5 min max)';
+
+            try {
+                const res = await fetch('/api/request-photo', { method: 'POST' });
+                const data = await res.json();
+                msg.textContent = 'Pedido enviado. La ESP32 mandara la foto en su proximo ciclo.';
+                // Poll for new photo every 10 seconds
+                let attempts = 0;
+                const poll = setInterval(async () => {
+                    attempts++;
+                    const readings = await fetchJSON('/api/readings?limit=1');
+                    if (readings.length > 0) {
+                        const latest = new Date(readings[0].timestamp.replace(' ', 'T'));
+                        const now = new Date();
+                        if ((now - latest) < 30000) {  // Photo arrived in last 30 seconds
+                            clearInterval(poll);
+                            msg.textContent = 'Foto recibida!';
+                            loadPhotos();
+                            loadStatus();
+                            setTimeout(() => { msg.classList.add('hidden'); }, 3000);
+                        }
+                    }
+                    if (attempts > 30) {  // Stop after 5 minutes
+                        clearInterval(poll);
+                        msg.textContent = 'Timeout. La foto no llego aun. Revisa la ESP32.';
+                    }
+                }, 10000);
+            } catch(e) {
+                msg.textContent = 'Error: ' + e.message;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Pedir foto ahora';
+            }
+        }
+
+        // Initial load
+        loadStatus();
+        loadPhotos();
+
+        // Auto-refresh every 30 seconds
+        setInterval(() => {
+            loadStatus();
+            const activeTab = document.querySelector('.tab.active')?.textContent?.toLowerCase();
+            if (activeTab === 'fotos') loadPhotos();
+            else if (activeTab === 'eventos') loadEvents();
+            else if (activeTab === 'semana') loadStats();
+        }, 30000);
+    </script>
+</body>
+</html>

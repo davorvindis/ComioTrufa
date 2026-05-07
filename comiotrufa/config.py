@@ -91,8 +91,8 @@ def load_config(config_path: str = "config.yaml") -> Config:
 
     claude_data = data.get("claude", {})
     claude = ClaudeConfig(
-        api_key=os.environ.get("ANTHROPIC_API_KEY", ""),
-        model=claude_data.get("model", "claude-sonnet-4-20250514"),
+        api_key=os.environ.get("OPENAI_API_KEY", ""),
+        model=claude_data.get("model", "gpt-4o-mini"),
         max_tokens=claude_data.get("max_tokens", 200),
         timeout_seconds=claude_data.get("timeout_seconds", 30),
     )

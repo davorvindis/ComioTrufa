@@ -1,6 +1,6 @@
-"""Claude Vision API integration for ComioTrufa.
+"""OpenAI Vision API integration for ComioTrufa.
 
-Sends bowl photos to Claude and gets structured state analysis.
+Sends bowl photos to GPT-4o and gets structured state analysis.
 """
 
 import base64
@@ -11,26 +11,36 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
-import anthropic
+from openai import OpenAI, RateLimitError, APIStatusError, APITimeoutError
 
 from .config import ClaudeConfig
 
 logger = logging.getLogger(__name__)
 
-ANALYSIS_PROMPT = """Mira esta foto de un plato de comida para perro. Analiza y responde SOLO con JSON:
+ANALYSIS_PROMPT = """Sos un sistema de monitoreo del plato de comida de una perrita llamada Trufa.
+
+El plato es metalico/plateado, redondo, sobre piso de ceramica clara. Puede haber un segundo plato al lado (agua, ignoralo).
+La comida son croquetas marrones con forma de corazon.
+
+Analiza la foto y responde SOLO con JSON:
 
 {
   "state": "food" o "empty",
   "confidence": 0.0 a 1.0,
-  "description": "breve descripcion de lo que ves"
+  "description": "breve descripcion",
+  "kibble_count": "none", "few" o "many"
 }
 
-Reglas:
-- "food" significa que hay comida visible (croquetas, comida humeda, etc.) en el plato
-- "empty" significa que el plato esta vacio o solo tiene agua/residuos minimos
-- confidence debe reflejar que tan seguro estas (1.0 = totalmente seguro)
-- Si el plato no es visible o la imagen no es clara, usa confidence < 0.5
-- Responde SOLO el JSON, sin texto adicional
+Criterios ESTRICTOS:
+- "food" = hay croquetas agrupadas formando una porcion visible. Aunque sean pocas (15-20+), si se ven como una porcion servida, es "food".
+- "empty" = el plato esta vacio, o tiene solo 1-5 croquetas sueltas dispersas en el fondo (sobras que la perrita dejo). Esto cuenta como que YA COMIO.
+- CLAVE: la diferencia entre "food" y "empty" es si parece una porcion servida (agrupadas) vs sobras sueltas (dispersas, pocas).
+- Un plato limpio sin nada es "empty" con confidence alta.
+- Si no se ve el plato claramente, confidence < 0.5
+
+kibble_count: "none" si no hay croquetas, "few" si hay 1-10, "many" si hay mas de 10.
+
+Responde SOLO el JSON.
 """
 
 
@@ -45,7 +55,7 @@ class VisionResult:
 class VisionAnalyzer:
     def __init__(self, config: ClaudeConfig):
         self.config = config
-        self.client = anthropic.Anthropic(api_key=config.api_key)
+        self.client = OpenAI(api_key=config.api_key)
 
     def analyze(self, image_path: str, max_retries: int = 3) -> Optional[VisionResult]:
         """Analyze a bowl photo and return the detected state.
@@ -64,11 +74,11 @@ class VisionAnalyzer:
         for attempt in range(max_retries):
             try:
                 return self._call_api(image_data)
-            except anthropic.RateLimitError:
+            except RateLimitError:
                 wait = 2 ** (attempt + 1)
                 logger.warning(f"Rate limited, retrying in {wait}s...")
                 time.sleep(wait)
-            except anthropic.APIStatusError as e:
+            except APIStatusError as e:
                 if e.status_code >= 500:
                     wait = 2 ** (attempt + 1)
                     logger.warning(f"API error {e.status_code}, retrying in {wait}s...")
@@ -76,7 +86,7 @@ class VisionAnalyzer:
                 else:
                     logger.error(f"API client error: {e}")
                     return None
-            except anthropic.APITimeoutError:
+            except APITimeoutError:
                 wait = 2 ** (attempt + 1)
                 logger.warning(f"API timeout, retrying in {wait}s...")
                 time.sleep(wait)
@@ -98,8 +108,8 @@ class VisionAnalyzer:
             return base64.standard_b64encode(f.read()).decode("utf-8")
 
     def _call_api(self, image_data: str) -> VisionResult:
-        """Make the Claude Vision API call."""
-        message = self.client.messages.create(
+        """Make the OpenAI Vision API call."""
+        response = self.client.chat.completions.create(
             model=self.config.model,
             max_tokens=self.config.max_tokens,
             messages=[
@@ -107,11 +117,10 @@ class VisionAnalyzer:
                     "role": "user",
                     "content": [
                         {
-                            "type": "image",
-                            "source": {
-                                "type": "base64",
-                                "media_type": "image/jpeg",
-                                "data": image_data,
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:image/jpeg;base64,{image_data}",
+                                "detail": "low",
                             },
                         },
                         {
@@ -123,12 +132,11 @@ class VisionAnalyzer:
             ],
         )
 
-        raw_text = message.content[0].text
+        raw_text = response.choices[0].message.content
         return self._parse_response(raw_text)
 
     def _parse_response(self, raw_text: str) -> VisionResult:
-        """Parse the JSON response from Claude."""
-        # Try to extract JSON from the response
+        """Parse the JSON response from the model."""
         text = raw_text.strip()
 
         # Handle markdown code blocks
