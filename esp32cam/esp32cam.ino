@@ -15,6 +15,7 @@
 
 #include "esp_camera.h"
 #include <WiFi.h>
+#include <WiFiClientSecure.h>
 #include <HTTPClient.h>
 #include "esp_timer.h"
 #include "esp_sleep.h"
@@ -26,8 +27,8 @@ const char* WIFI_SSID = "Personal-MD-2.4";
 const char* WIFI_PASSWORD = "TRUFA401";
 
 // Servidor (tu PC o servidor en la nube)
-const char* SERVER_URL = "http://192.168.0.247:8000/api/photo";
-const char* CHECK_URL = "http://192.168.0.247:8000/api/should-capture";
+const char* SERVER_URL = "https://comiotrufa.onrender.com/api/photo";
+const char* CHECK_URL = "https://comiotrufa.onrender.com/api/should-capture";
 
 // Intervalo entre fotos (en minutos)
 const int INTERVAL_MINUTES = 5;
@@ -216,8 +217,10 @@ void connectWiFi() {
 bool checkPhotoRequest() {
   if (WiFi.status() != WL_CONNECTED) return false;
 
+  WiFiClientSecure client;
+  client.setInsecure();  // Skip cert verification (ok for this use case)
   HTTPClient http;
-  http.begin(CHECK_URL);
+  http.begin(client, CHECK_URL);
   http.setTimeout(5000);
   int httpCode = http.GET();
 
@@ -250,7 +253,7 @@ bool captureAndSend() {
 
   Serial.printf("Foto capturada: %u bytes (%dx%d)\n", fb->len, fb->width, fb->height);
 
-  // Enviar por HTTP
+  // Enviar por HTTPS
   bool result = sendPhoto(fb->buf, fb->len);
 
   esp_camera_fb_return(fb);
@@ -258,11 +261,13 @@ bool captureAndSend() {
 }
 
 bool sendPhoto(uint8_t *imageData, size_t imageLen) {
+  WiFiClientSecure client;
+  client.setInsecure();  // Skip cert verification
   HTTPClient http;
 
   Serial.printf("Enviando a %s ...\n", SERVER_URL);
 
-  http.begin(SERVER_URL);
+  http.begin(client, SERVER_URL);
   http.setTimeout(30000);  // 30 segundos timeout
   http.addHeader("Content-Type", "image/jpeg");
   http.addHeader("X-Device-ID", "comiotrufa-esp32");

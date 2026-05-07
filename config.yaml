@@ -10,7 +10,7 @@ camera:
 
 monitor:
   interval_minutes: 5
-  debounce_readings: 2
+  debounce_readings: 1
 
 claude:
   # Set via environment variable OPENAI_API_KEY

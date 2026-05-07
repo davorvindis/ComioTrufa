@@ -1,7 +1,8 @@
 """SQLite database module for ComioTrufa."""
 
+import base64
 import sqlite3
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from pathlib import Path
 from typing import Optional
 
@@ -39,6 +40,7 @@ class Database:
                 state TEXT NOT NULL,
                 confidence REAL,
                 image_path TEXT,
+                image_data TEXT,
                 raw_response TEXT
             );
 
@@ -53,13 +55,20 @@ class Database:
             CREATE INDEX IF NOT EXISTS idx_events_timestamp ON events(timestamp);
             CREATE INDEX IF NOT EXISTS idx_readings_timestamp ON readings(timestamp);
         """)
+        # Add image_data column if it doesn't exist (migration)
+        try:
+            self.conn.execute("SELECT image_data FROM readings LIMIT 1")
+        except sqlite3.OperationalError:
+            self.conn.execute("ALTER TABLE readings ADD COLUMN image_data TEXT")
         self.conn.commit()
 
-    def save_reading(self, state: str, confidence: float, image_path: str, raw_response: str = ""):
+    def save_reading(self, state: str, confidence: float, image_path: str,
+                     raw_response: str = "", image_data: str = ""):
         """Save a raw reading from the vision analysis."""
         self.conn.execute(
-            "INSERT INTO readings (state, confidence, image_path, raw_response) VALUES (?, ?, ?, ?)",
-            (state, confidence, image_path, raw_response),
+            "INSERT INTO readings (state, confidence, image_path, image_data, raw_response) "
+            "VALUES (?, ?, ?, ?, ?)",
+            (state, confidence, image_path, image_data, raw_response),
         )
         self.conn.commit()
 
@@ -73,7 +82,6 @@ class Database:
         )
         self.conn.commit()
 
-        # Update daily stats
         if event_type == "dog_ate":
             self._update_daily_stats_meal()
         elif event_type == "bowl_refilled":
@@ -82,28 +90,39 @@ class Database:
         return cursor.lastrowid
 
     def mark_notified(self, event_id: int):
-        """Mark an event as notified via Telegram."""
         self.conn.execute("UPDATE events SET notified = 1 WHERE id = ?", (event_id,))
         self.conn.commit()
 
     def get_last_state(self) -> Optional[str]:
-        """Get the most recent known state."""
         row = self.conn.execute(
             "SELECT new_state FROM events ORDER BY timestamp DESC LIMIT 1"
         ).fetchone()
-        if row:
-            return row["new_state"]
-        return None
+        return row["new_state"] if row else None
 
     def get_last_reading(self) -> Optional[dict]:
-        """Get the most recent reading."""
         row = self.conn.execute(
-            "SELECT * FROM readings ORDER BY timestamp DESC LIMIT 1"
+            "SELECT id, timestamp, state, confidence, image_path, raw_response FROM readings "
+            "ORDER BY timestamp DESC LIMIT 1"
         ).fetchone()
         return dict(row) if row else None
 
+    def get_readings_by_date(self, target_date: str, limit: int = 100) -> list[dict]:
+        """Get readings for a specific date (YYYY-MM-DD)."""
+        rows = self.conn.execute(
+            "SELECT id, timestamp, state, confidence, image_path, raw_response "
+            "FROM readings WHERE date(timestamp) = ? ORDER BY timestamp DESC LIMIT ?",
+            (target_date, limit),
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+    def get_reading_image(self, reading_id: int) -> Optional[str]:
+        """Get base64 image data for a specific reading."""
+        row = self.conn.execute(
+            "SELECT image_data FROM readings WHERE id = ?", (reading_id,)
+        ).fetchone()
+        return row["image_data"] if row and row["image_data"] else None
+
     def get_recent_events(self, limit: int = 10) -> list[dict]:
-        """Get recent state change events."""
         rows = self.conn.execute(
             "SELECT * FROM events WHERE event_type IN ('dog_ate', 'bowl_refilled') "
             "ORDER BY timestamp DESC LIMIT ?",
@@ -111,26 +130,42 @@ class Database:
         ).fetchall()
         return [dict(r) for r in rows]
 
+    def get_events_by_date(self, target_date: str) -> list[dict]:
+        """Get events for a specific date."""
+        rows = self.conn.execute(
+            "SELECT * FROM events WHERE event_type IN ('dog_ate', 'bowl_refilled') "
+            "AND date(timestamp) = ? ORDER BY timestamp DESC",
+            (target_date,),
+        ).fetchall()
+        return [dict(r) for r in rows]
+
     def get_today_stats(self) -> dict:
-        """Get today's statistics."""
         today = date.today().isoformat()
+        return self.get_date_stats(today)
+
+    def get_date_stats(self, target_date: str) -> dict:
         row = self.conn.execute(
-            "SELECT * FROM daily_stats WHERE date = ?", (today,)
+            "SELECT * FROM daily_stats WHERE date = ?", (target_date,)
         ).fetchone()
         if row:
             return dict(row)
-        return {"date": today, "meals_detected": 0, "first_meal_time": None,
+        return {"date": target_date, "meals_detected": 0, "first_meal_time": None,
                 "last_meal_time": None, "refills": 0}
 
     def get_week_stats(self) -> list[dict]:
-        """Get the last 7 days of statistics."""
         rows = self.conn.execute(
             "SELECT * FROM daily_stats ORDER BY date DESC LIMIT 7"
         ).fetchall()
         return [dict(r) for r in rows]
 
+    def get_dates_with_data(self) -> list[str]:
+        """Get all dates that have readings."""
+        rows = self.conn.execute(
+            "SELECT DISTINCT date(timestamp) as d FROM readings ORDER BY d DESC"
+        ).fetchall()
+        return [r["d"] for r in rows]
+
     def get_last_eat_time(self) -> Optional[str]:
-        """Get the timestamp of the last 'dog_ate' event."""
         row = self.conn.execute(
             "SELECT timestamp FROM events WHERE event_type = 'dog_ate' "
             "ORDER BY timestamp DESC LIMIT 1"
@@ -159,22 +194,19 @@ class Database:
         """, (today,))
         self.conn.commit()
 
-    def cleanup_old_images(self, keep_days: int, images_dir: str):
-        """Delete image files older than keep_days."""
-        from datetime import timedelta
+    def cleanup_old_readings(self, keep_days: int):
+        """Delete old readings (but keep image_data in DB)."""
         cutoff = (datetime.now() - timedelta(days=keep_days)).isoformat()
-
+        # Delete filesystem images
         rows = self.conn.execute(
             "SELECT image_path FROM readings WHERE timestamp < ? AND image_path IS NOT NULL",
             (cutoff,),
         ).fetchall()
-
         for row in rows:
             path = Path(row["image_path"])
             if path.exists():
                 path.unlink()
-
-        # Clean up old readings (keep events forever)
+        # Remove old readings from DB
         self.conn.execute("DELETE FROM readings WHERE timestamp < ?", (cutoff,))
         self.conn.commit()
 

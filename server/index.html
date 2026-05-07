@@ -14,137 +14,180 @@
         }
         header {
             background: #16213e;
-            padding: 20px;
+            padding: 14px;
             text-align: center;
             border-bottom: 3px solid #e94560;
         }
-        header h1 { font-size: 28px; }
+        header h1 { font-size: 22px; }
         header h1 span { color: #e94560; }
+
+        /* Status bar */
         .status-bar {
-            display: flex;
-            justify-content: center;
-            gap: 30px;
-            padding: 20px;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            padding: 12px;
             background: #0f3460;
-            flex-wrap: wrap;
+        }
+        @media (max-width: 600px) {
+            .status-bar { grid-template-columns: repeat(2, 1fr); }
         }
         .status-card {
             background: #16213e;
-            border-radius: 12px;
-            padding: 16px 24px;
+            border-radius: 10px;
+            padding: 10px 12px;
             text-align: center;
-            min-width: 160px;
         }
-        .status-card .label { font-size: 12px; color: #888; text-transform: uppercase; }
-        .status-card .value { font-size: 24px; font-weight: bold; margin-top: 4px; }
+        .status-card .label { font-size: 10px; color: #888; text-transform: uppercase; letter-spacing: 0.5px; }
+        .status-card .value { font-size: 18px; font-weight: bold; margin-top: 2px; }
         .status-card .value.food { color: #4ade80; }
         .status-card .value.empty { color: #f87171; }
         .status-card .value.unknown { color: #fbbf24; }
 
+        /* Date navigation */
+        .date-nav {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            padding: 12px;
+            background: #16213e;
+        }
+        .date-nav button {
+            background: #0f3460;
+            color: white;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .date-nav button:hover { background: #e94560; }
+        .date-nav button:disabled { opacity: 0.3; cursor: default; }
+        .date-nav .date-display {
+            font-size: 16px;
+            font-weight: 600;
+            min-width: 140px;
+            text-align: center;
+        }
+        .date-nav .date-sub { font-size: 11px; color: #888; }
+
+        /* Tabs */
         .tabs {
             display: flex;
             justify-content: center;
-            gap: 0;
             background: #16213e;
+            border-top: 1px solid #0f3460;
         }
         .tab {
-            padding: 12px 24px;
+            padding: 10px 20px;
             cursor: pointer;
             border-bottom: 3px solid transparent;
             color: #888;
             font-weight: 500;
-            transition: all 0.2s;
+            font-size: 14px;
         }
         .tab:hover { color: #ccc; }
         .tab.active { color: #e94560; border-bottom-color: #e94560; }
 
-        .content { max-width: 1000px; margin: 0 auto; padding: 20px; }
+        .content { max-width: 1000px; margin: 0 auto; padding: 12px; }
+
+        /* Action buttons */
+        .actions {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .btn {
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        .btn-primary { background: #e94560; color: white; }
+        .btn-secondary { background: #0f3460; color: white; }
+        .btn:disabled { opacity: 0.5; }
 
         /* Photos grid */
         .photos-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 16px;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 10px;
+        }
+        @media (max-width: 600px) {
+            .photos-grid { grid-template-columns: repeat(2, 1fr); gap: 6px; }
         }
         .photo-card {
             background: #16213e;
-            border-radius: 12px;
+            border-radius: 10px;
             overflow: hidden;
-            transition: transform 0.2s;
         }
-        .photo-card:hover { transform: scale(1.02); }
         .photo-card img {
             width: 100%;
-            height: 200px;
+            height: 160px;
             object-fit: cover;
         }
-        .photo-card .info {
-            padding: 12px;
+        @media (max-width: 600px) {
+            .photo-card img { height: 120px; }
         }
-        .photo-card .info .time { font-size: 13px; color: #888; }
-        .photo-card .info .state-badge {
+        .photo-card .info { padding: 8px; }
+        .photo-card .info .time { font-size: 12px; color: #888; }
+        .state-badge {
             display: inline-block;
-            padding: 3px 10px;
-            border-radius: 20px;
-            font-size: 12px;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
             font-weight: bold;
-            margin-top: 6px;
         }
         .state-badge.food { background: #166534; color: #4ade80; }
         .state-badge.empty { background: #7f1d1d; color: #f87171; }
         .state-badge.unknown { background: #713f12; color: #fbbf24; }
-        .photo-card .info .confidence {
-            font-size: 12px;
-            color: #666;
-            margin-top: 4px;
-        }
         .photo-card .info .description {
-            font-size: 13px;
+            font-size: 11px;
             color: #aaa;
-            margin-top: 6px;
+            margin-top: 4px;
             font-style: italic;
         }
 
         /* Events list */
-        .events-list { display: flex; flex-direction: column; gap: 8px; }
+        .events-list { display: flex; flex-direction: column; gap: 6px; }
         .event-item {
             background: #16213e;
             border-radius: 8px;
-            padding: 14px 18px;
+            padding: 12px;
             display: flex;
             align-items: center;
-            gap: 14px;
+            gap: 10px;
         }
-        .event-item .emoji { font-size: 28px; }
+        .event-item .emoji { font-size: 24px; }
         .event-item .details { flex: 1; }
-        .event-item .details .action { font-weight: 600; font-size: 15px; }
-        .event-item .details .time { font-size: 13px; color: #888; margin-top: 2px; }
-        .event-item .thumb {
-            width: 60px;
-            height: 60px;
-            border-radius: 8px;
-            object-fit: cover;
-        }
+        .event-item .details .action { font-weight: 600; font-size: 14px; }
+        .event-item .details .time { font-size: 12px; color: #888; margin-top: 2px; }
 
         /* Stats */
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: 12px;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 8px;
         }
         .stat-card {
             background: #16213e;
-            border-radius: 12px;
-            padding: 20px;
+            border-radius: 10px;
+            padding: 14px;
             text-align: center;
         }
-        .stat-card .day { font-size: 14px; color: #888; }
-        .stat-card .meals { font-size: 36px; font-weight: bold; color: #4ade80; margin: 8px 0; }
-        .stat-card .times { font-size: 12px; color: #666; }
+        .stat-card .day { font-size: 13px; color: #888; }
+        .stat-card .meals { font-size: 30px; font-weight: bold; color: #4ade80; margin: 4px 0; }
+        .stat-card .times { font-size: 11px; color: #666; }
 
         .hidden { display: none; }
-        .empty-msg { text-align: center; color: #666; padding: 40px; font-size: 16px; }
-        .auto-refresh { text-align: center; padding: 10px; color: #555; font-size: 12px; }
+        .empty-msg { text-align: center; color: #666; padding: 30px; font-size: 14px; }
+        #photoRequest { text-align: center; padding: 8px; color: #fbbf24; font-size: 13px; }
+        .footer { text-align: center; padding: 8px; color: #444; font-size: 11px; }
     </style>
 </head>
 <body>
@@ -152,18 +195,18 @@
         <h1>ComioTrufa <span>🐕</span></h1>
     </header>
 
-    <div class="status-bar" id="statusBar">
+    <div class="status-bar">
         <div class="status-card">
-            <div class="label">Estado del plato</div>
+            <div class="label">Plato</div>
             <div class="value" id="currentState">...</div>
         </div>
         <div class="status-card">
             <div class="label">Ultima lectura</div>
-            <div class="value" id="lastReading" style="font-size:16px">...</div>
+            <div class="value" id="lastReading" style="font-size:14px">...</div>
         </div>
         <div class="status-card">
             <div class="label">Ultima comida</div>
-            <div class="value" id="lastEat" style="font-size:16px">...</div>
+            <div class="value" id="lastEat" style="font-size:14px">...</div>
         </div>
         <div class="status-card">
             <div class="label">Hoy</div>
@@ -171,19 +214,29 @@
         </div>
     </div>
 
+    <div class="date-nav">
+        <button onclick="prevDay()" id="btnPrev">&lt;</button>
+        <div>
+            <div class="date-display" id="dateDisplay">Hoy</div>
+            <div class="date-sub" id="dateSub"></div>
+        </div>
+        <button onclick="nextDay()" id="btnNext">&gt;</button>
+        <button onclick="goToday()" class="btn btn-secondary" style="font-size:12px">Hoy</button>
+    </div>
+
     <div class="tabs">
-        <div class="tab active" onclick="showTab('photos')">Fotos</div>
-        <div class="tab" onclick="showTab('events')">Eventos</div>
-        <div class="tab" onclick="showTab('stats')">Semana</div>
+        <div class="tab active" data-tab="photos" onclick="showTab('photos')">Fotos</div>
+        <div class="tab" data-tab="events" onclick="showTab('events')">Eventos</div>
+        <div class="tab" data-tab="stats" onclick="showTab('stats')">Semana</div>
     </div>
 
     <div class="content">
         <div id="tab-photos">
-            <div style="display:flex;gap:10px;margin-bottom:16px;justify-content:center;flex-wrap:wrap">
-                <button onclick="requestPhoto()" id="btnRequestPhoto" style="background:#e94560;color:white;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;font-size:14px;font-weight:600">Pedir foto ahora</button>
-                <button onclick="loadPhotos()" style="background:#0f3460;color:white;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;font-size:14px">Actualizar</button>
+            <div class="actions">
+                <button onclick="requestPhoto()" id="btnRequestPhoto" class="btn btn-primary">Pedir foto ahora</button>
+                <button onclick="loadPhotos()" class="btn btn-secondary">Actualizar</button>
             </div>
-            <div id="photoRequest" class="hidden" style="text-align:center;padding:10px;color:#fbbf24;font-size:14px"></div>
+            <div id="photoRequest" class="hidden"></div>
             <div class="photos-grid" id="photosGrid"></div>
         </div>
         <div id="tab-events" class="hidden">
@@ -194,9 +247,61 @@
         </div>
     </div>
 
-    <div class="auto-refresh">Se actualiza cada 30 segundos</div>
+    <div class="footer">Se actualiza cada 30s</div>
 
     <script>
+        let currentDate = new Date();
+        const today = new Date();
+
+        function dateStr(d) {
+            return d.toISOString().split('T')[0];
+        }
+
+        function isToday(d) {
+            return dateStr(d) === dateStr(today);
+        }
+
+        function formatDateDisplay(d) {
+            if (isToday(d)) return 'Hoy';
+            const yesterday = new Date(today);
+            yesterday.setDate(yesterday.getDate() - 1);
+            if (dateStr(d) === dateStr(yesterday)) return 'Ayer';
+            return d.toLocaleDateString('es-AR', { weekday: 'short', day: 'numeric', month: 'short' });
+        }
+
+        function updateDateNav() {
+            document.getElementById('dateDisplay').textContent = formatDateDisplay(currentDate);
+            document.getElementById('dateSub').textContent = dateStr(currentDate);
+            document.getElementById('btnNext').disabled = isToday(currentDate);
+        }
+
+        function prevDay() {
+            currentDate.setDate(currentDate.getDate() - 1);
+            updateDateNav();
+            refreshCurrentTab();
+        }
+
+        function nextDay() {
+            if (!isToday(currentDate)) {
+                currentDate.setDate(currentDate.getDate() + 1);
+                updateDateNav();
+                refreshCurrentTab();
+            }
+        }
+
+        function goToday() {
+            currentDate = new Date();
+            updateDateNav();
+            refreshCurrentTab();
+        }
+
+        function refreshCurrentTab() {
+            const active = document.querySelector('.tab.active')?.dataset.tab;
+            if (active === 'photos') loadPhotos();
+            else if (active === 'events') loadEvents();
+            else if (active === 'stats') loadStats();
+        }
+
         async function fetchJSON(url) {
             const res = await fetch(url);
             return res.json();
@@ -205,116 +310,128 @@
         function formatTime(ts) {
             if (!ts) return 'N/A';
             const d = new Date(ts.replace(' ', 'T'));
+            return d.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+        }
+
+        function formatDateTime(ts) {
+            if (!ts) return 'N/A';
+            const d = new Date(ts.replace(' ', 'T'));
             return d.toLocaleString('es-AR', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' });
         }
 
         function stateText(state) {
             if (state === 'food') return 'Con comida';
             if (state === 'empty') return 'Vacio';
-            return 'Desconocido';
+            return '?';
         }
 
         async function loadStatus() {
-            const [status, today] = await Promise.all([
-                fetchJSON('/api/status'),
-                fetchJSON('/api/today'),
-            ]);
+            try {
+                const [status, today_stats] = await Promise.all([
+                    fetchJSON('/api/status'),
+                    fetchJSON('/api/today'),
+                ]);
 
-            const stateEl = document.getElementById('currentState');
-            const state = status.current_state || 'unknown';
-            stateEl.textContent = stateText(state);
-            stateEl.className = 'value ' + state;
+                const stateEl = document.getElementById('currentState');
+                const state = status.current_state || 'unknown';
+                stateEl.textContent = stateText(state);
+                stateEl.className = 'value ' + state;
 
-            const reading = status.last_reading;
-            document.getElementById('lastReading').textContent = reading ? formatTime(reading.timestamp) : 'Sin datos';
-            document.getElementById('lastEat').textContent = status.last_eat_time ? formatTime(status.last_eat_time) : 'Sin datos';
-            document.getElementById('todayMeals').textContent = today.meals_detected + ' comida(s)';
+                const reading = status.last_reading;
+                document.getElementById('lastReading').textContent = reading ? formatDateTime(reading.timestamp) : '-';
+                document.getElementById('lastEat').textContent = status.last_eat_time ? formatDateTime(status.last_eat_time) : '-';
+                document.getElementById('todayMeals').textContent = today_stats.meals_detected;
+            } catch(e) { console.error('loadStatus error', e); }
         }
 
         async function loadPhotos() {
-            const readings = await fetchJSON('/api/readings?limit=30');
-            const grid = document.getElementById('photosGrid');
+            try {
+                const d = dateStr(currentDate);
+                const readings = await fetchJSON(`/api/readings?limit=50&date=${d}`);
+                const grid = document.getElementById('photosGrid');
 
-            if (readings.length === 0) {
-                grid.innerHTML = '<div class="empty-msg">Sin fotos todavia. Esperando a la ESP32-CAM...</div>';
-                return;
-            }
+                if (readings.length === 0) {
+                    grid.innerHTML = `<div class="empty-msg">Sin fotos para ${formatDateDisplay(currentDate)}</div>`;
+                    return;
+                }
 
-            grid.innerHTML = readings.map(r => {
-                let desc = '';
-                try { desc = JSON.parse(r.raw_response || '{}').description || ''; } catch(e) {}
-                return `
-                    <div class="photo-card">
-                        <img src="${r.image_url}" alt="bowl" loading="lazy" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 1 1%22><rect fill=%22%2316213e%22 width=%221%22 height=%221%22/></svg>'">
-                        <div class="info">
-                            <div class="time">${formatTime(r.timestamp)}</div>
-                            <span class="state-badge ${r.state}">${stateText(r.state)}</span>
-                            <span style="font-size:12px;color:#666;margin-left:8px">${(r.confidence * 100).toFixed(0)}%</span>
-                            ${desc ? `<div class="description">"${desc}"</div>` : ''}
+                grid.innerHTML = readings.map(r => {
+                    let desc = '';
+                    try { desc = JSON.parse(r.raw_response || '{}').description || ''; } catch(e) {}
+                    return `
+                        <div class="photo-card">
+                            <img src="${r.image_url}" alt="bowl" loading="lazy"
+                                 onerror="this.style.background='#16213e';this.style.height='80px'">
+                            <div class="info">
+                                <div class="time">${formatTime(r.timestamp)}</div>
+                                <span class="state-badge ${r.state}">${stateText(r.state)}</span>
+                                <span style="font-size:11px;color:#666;margin-left:6px">${(r.confidence * 100).toFixed(0)}%</span>
+                                ${desc ? `<div class="description">${desc}</div>` : ''}
+                            </div>
                         </div>
-                    </div>
-                `;
-            }).join('');
+                    `;
+                }).join('');
+            } catch(e) { console.error('loadPhotos error', e); }
         }
 
         async function loadEvents() {
-            const events = await fetchJSON('/api/events?limit=30');
-            const list = document.getElementById('eventsList');
+            try {
+                const d = dateStr(currentDate);
+                const events = await fetchJSON(`/api/events?limit=50&date=${d}`);
+                const list = document.getElementById('eventsList');
 
-            if (events.length === 0) {
-                list.innerHTML = '<div class="empty-msg">Sin eventos todavia</div>';
-                return;
-            }
+                if (events.length === 0) {
+                    list.innerHTML = `<div class="empty-msg">Sin eventos para ${formatDateDisplay(currentDate)}</div>`;
+                    return;
+                }
 
-            list.innerHTML = events.map(e => {
-                const isAte = e.event_type === 'dog_ate';
-                const emoji = isAte ? '🐕' : '🍽️';
-                const action = isAte ? 'Trufa comio!' : 'Plato rellenado';
-                const imgHtml = e.image_url ? `<img class="thumb" src="${e.image_url}" alt="">` : '';
-                return `
-                    <div class="event-item">
-                        <div class="emoji">${emoji}</div>
-                        <div class="details">
-                            <div class="action">${action}</div>
-                            <div class="time">${formatTime(e.timestamp)} - Confianza: ${(e.confidence * 100).toFixed(0)}%</div>
+                list.innerHTML = events.map(e => {
+                    const isAte = e.event_type === 'dog_ate';
+                    const emoji = isAte ? '🐕' : '🍽️';
+                    const action = isAte ? 'Trufa comio!' : 'Plato rellenado';
+                    return `
+                        <div class="event-item">
+                            <div class="emoji">${emoji}</div>
+                            <div class="details">
+                                <div class="action">${action}</div>
+                                <div class="time">${formatTime(e.timestamp)} - Confianza: ${(e.confidence * 100).toFixed(0)}%</div>
+                            </div>
                         </div>
-                        ${imgHtml}
-                    </div>
-                `;
-            }).join('');
+                    `;
+                }).join('');
+            } catch(e) { console.error('loadEvents error', e); }
         }
 
         async function loadStats() {
-            const stats = await fetchJSON('/api/week');
-            const grid = document.getElementById('statsGrid');
+            try {
+                const stats = await fetchJSON('/api/week');
+                const grid = document.getElementById('statsGrid');
 
-            if (stats.length === 0) {
-                grid.innerHTML = '<div class="empty-msg">Sin datos de la semana</div>';
-                return;
-            }
+                if (stats.length === 0) {
+                    grid.innerHTML = '<div class="empty-msg">Sin datos de la semana</div>';
+                    return;
+                }
 
-            grid.innerHTML = stats.map(s => `
-                <div class="stat-card">
-                    <div class="day">${s.date}</div>
-                    <div class="meals">${s.meals_detected}</div>
-                    <div class="times">
-                        Primera: ${s.first_meal_time || '--:--'}<br>
-                        Ultima: ${s.last_meal_time || '--:--'}<br>
-                        Rellenados: ${s.refills}
+                grid.innerHTML = stats.map(s => `
+                    <div class="stat-card">
+                        <div class="day">${s.date}</div>
+                        <div class="meals">${s.meals_detected}</div>
+                        <div class="times">
+                            ${s.first_meal_time ? s.first_meal_time.substring(0,5) : '--:--'} -
+                            ${s.last_meal_time ? s.last_meal_time.substring(0,5) : '--:--'}<br>
+                            ${s.refills} rellenado(s)
+                        </div>
                     </div>
-                </div>
-            `).join('');
+                `).join('');
+            } catch(e) { console.error('loadStats error', e); }
         }
 
         function showTab(name) {
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.content > div').forEach(d => d.classList.add('hidden'));
             document.getElementById('tab-' + name).classList.remove('hidden');
-            event.target.classList.add('active');
-
-            if (name === 'photos') loadPhotos();
-            if (name === 'events') loadEvents();
-            if (name === 'stats') loadStats();
+            document.querySelector(`.tab[data-tab="${name}"]`).classList.add('active');
+            refreshCurrentTab();
         }
 
         async function requestPhoto() {
@@ -323,31 +440,27 @@
             btn.disabled = true;
             btn.textContent = 'Pidiendo...';
             msg.classList.remove('hidden');
-            msg.textContent = 'Solicitando foto a la ESP32-CAM... (llega en el proximo ciclo, ~5 min max)';
+            msg.textContent = 'Esperando foto de la ESP32... (max ~10s)';
 
             try {
-                const res = await fetch('/api/request-photo', { method: 'POST' });
-                const data = await res.json();
-                msg.textContent = 'Pedido enviado. La ESP32 mandara la foto en su proximo ciclo.';
-                // Poll for new photo every 10 seconds
+                await fetch('/api/request-photo', { method: 'POST' });
                 let attempts = 0;
                 const poll = setInterval(async () => {
                     attempts++;
-                    const readings = await fetchJSON('/api/readings?limit=1');
+                    const readings = await fetchJSON('/api/readings?limit=1&date=' + dateStr(new Date()));
                     if (readings.length > 0) {
                         const latest = new Date(readings[0].timestamp.replace(' ', 'T'));
-                        const now = new Date();
-                        if ((now - latest) < 30000) {  // Photo arrived in last 30 seconds
+                        if ((new Date() - latest) < 30000) {
                             clearInterval(poll);
                             msg.textContent = 'Foto recibida!';
-                            loadPhotos();
+                            goToday();
                             loadStatus();
-                            setTimeout(() => { msg.classList.add('hidden'); }, 3000);
+                            setTimeout(() => msg.classList.add('hidden'), 3000);
                         }
                     }
-                    if (attempts > 30) {  // Stop after 5 minutes
+                    if (attempts > 30) {
                         clearInterval(poll);
-                        msg.textContent = 'Timeout. La foto no llego aun. Revisa la ESP32.';
+                        msg.textContent = 'No llego. Revisa la ESP32.';
                     }
                 }, 10000);
             } catch(e) {
@@ -358,17 +471,14 @@
             }
         }
 
-        // Initial load
+        // Init
+        updateDateNav();
         loadStatus();
         loadPhotos();
 
-        // Auto-refresh every 30 seconds
         setInterval(() => {
             loadStatus();
-            const activeTab = document.querySelector('.tab.active')?.textContent?.toLowerCase();
-            if (activeTab === 'fotos') loadPhotos();
-            else if (activeTab === 'eventos') loadEvents();
-            else if (activeTab === 'semana') loadStats();
+            if (isToday(currentDate)) refreshCurrentTab();
         }, 30000);
     </script>
 </body>

@@ -4,6 +4,7 @@ Run with: uvicorn server.app:app --host 0.0.0.0 --port 8000
 """
 
 import asyncio
+import base64
 import json
 import logging
 from contextlib import asynccontextmanager
@@ -112,12 +113,14 @@ async def receive_photo(request: Request):
 
     logger.info(f"Analysis: state={result.state}, confidence={result.confidence:.2f}")
 
-    # Save reading
+    # Save reading with base64 image data for persistence
+    image_b64 = base64.b64encode(body).decode("utf-8")
     db.save_reading(
         state=result.state,
         confidence=result.confidence,
         image_path=str(filepath),
         raw_response=result.raw_response,
+        image_data=image_b64,
     )
 
     # Process state machine
@@ -149,7 +152,7 @@ async def receive_photo(request: Request):
             db.mark_notified(event_id)
 
     # Periodic cleanup
-    db.cleanup_old_images(config.camera.keep_images_days, config.camera.images_dir)
+    db.cleanup_old_readings(config.camera.keep_images_days)
 
     return Response(content=json.dumps(response_data), media_type="application/json")
 
@@ -193,46 +196,80 @@ async def get_status():
 
 
 @app.get("/api/readings")
-async def get_readings(limit: int = 50):
-    """Get recent readings with photos."""
-    rows = db.conn.execute(
-        "SELECT * FROM readings ORDER BY timestamp DESC LIMIT ?", (limit,)
-    ).fetchall()
-    readings = [dict(r) for r in rows]
-    # Convert image paths to URLs
+async def get_readings(limit: int = 50, date: str = ""):
+    """Get readings, optionally filtered by date."""
+    if date:
+        readings = db.get_readings_by_date(date, limit=limit)
+    else:
+        rows = db.conn.execute(
+            "SELECT id, timestamp, state, confidence, image_path, raw_response "
+            "FROM readings ORDER BY timestamp DESC LIMIT ?", (limit,)
+        ).fetchall()
+        readings = [dict(r) for r in rows]
     for r in readings:
-        if r.get("image_path"):
-            r["image_url"] = f"/images/{Path(r['image_path']).name}"
+        r["image_url"] = f"/api/image/{r['id']}"
     return Response(content=json.dumps(readings), media_type="application/json")
 
 
 @app.get("/api/events")
-async def get_events(limit: int = 50):
-    """Get recent events."""
-    events = db.get_recent_events(limit=limit)
-    for e in events:
-        if e.get("image_path"):
-            e["image_url"] = f"/images/{Path(e['image_path']).name}"
+async def get_events(limit: int = 50, date: str = ""):
+    """Get events, optionally filtered by date."""
+    if date:
+        events = db.get_events_by_date(date)
+    else:
+        events = db.get_recent_events(limit=limit)
     return Response(content=json.dumps(events), media_type="application/json")
 
 
 @app.get("/api/today")
 async def get_today():
-    """Get today's stats."""
     stats = db.get_today_stats()
+    return Response(content=json.dumps(stats), media_type="application/json")
+
+
+@app.get("/api/stats/{date}")
+async def get_date_stats(date: str):
+    stats = db.get_date_stats(date)
     return Response(content=json.dumps(stats), media_type="application/json")
 
 
 @app.get("/api/week")
 async def get_week():
-    """Get week stats."""
     stats = db.get_week_stats()
     return Response(content=json.dumps(stats), media_type="application/json")
 
 
+@app.get("/api/dates")
+async def get_dates():
+    """Get list of dates with data."""
+    dates = db.get_dates_with_data()
+    return Response(content=json.dumps(dates), media_type="application/json")
+
+
+@app.get("/api/image/{reading_id}")
+async def serve_image_from_db(reading_id: int):
+    """Serve image from database (base64) or filesystem fallback."""
+    # Try DB first (persists on Render)
+    image_b64 = db.get_reading_image(reading_id)
+    if image_b64:
+        image_bytes = base64.b64decode(image_b64)
+        return Response(content=image_bytes, media_type="image/jpeg")
+
+    # Fallback to filesystem
+    row = db.conn.execute(
+        "SELECT image_path FROM readings WHERE id = ?", (reading_id,)
+    ).fetchone()
+    if row and row["image_path"]:
+        filepath = Path(row["image_path"])
+        if filepath.exists():
+            return FileResponse(filepath, media_type="image/jpeg")
+
+    return Response(content="Not found", status_code=404)
+
+
 @app.get("/images/{filename}")
-async def serve_image(filename: str):
-    """Serve captured images."""
+async def serve_image_file(filename: str):
+    """Serve captured images from filesystem (legacy)."""
     filepath = Path(config.camera.images_dir) / filename
     if not filepath.exists():
         return Response(content="Not found", status_code=404)
