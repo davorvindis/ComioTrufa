@@ -294,6 +294,45 @@ async def index():
     return HTMLResponse(html_path.read_text())
 
 
+# ─── Admin Endpoints ─────────────────────────────────────────
+
+@app.delete("/api/reading/{reading_id}")
+async def delete_reading(reading_id: int):
+    """Delete a reading (photo)."""
+    db.conn.execute("DELETE FROM readings WHERE id = ?", (reading_id,))
+    db.conn.commit()
+    return Response(content='{"status":"deleted"}', media_type="application/json")
+
+
+@app.post("/api/admin/fix-stats")
+async def fix_stats(request: Request):
+    """Manually set daily stats. Body: {"date":"2026-05-07","meals":2,"last_eat":"09:30:00"}"""
+    data = json.loads(await request.body())
+    target_date = data.get("date")
+    meals = data.get("meals", 0)
+    first_meal = data.get("first_meal", None)
+    last_meal = data.get("last_meal", None)
+    refills = data.get("refills", 0)
+    db.conn.execute("""
+        INSERT INTO daily_stats (date, meals_detected, first_meal_time, last_meal_time, refills)
+        VALUES (?, ?, ?, ?, ?)
+        ON CONFLICT(date) DO UPDATE SET
+            meals_detected = ?, first_meal_time = ?, last_meal_time = ?, refills = ?
+    """, (target_date, meals, first_meal, last_meal, refills,
+          meals, first_meal, last_meal, refills))
+    db.conn.commit()
+    return Response(content='{"status":"updated"}', media_type="application/json")
+
+
+@app.post("/api/admin/reset-state")
+async def reset_state():
+    """Reset the state machine to unknown."""
+    state_machine.current_state = "unknown"
+    state_machine._pending_state = None
+    state_machine._pending_count = 0
+    return Response(content='{"status":"reset"}', media_type="application/json")
+
+
 @app.get("/health")
 async def health():
     """Health check endpoint."""

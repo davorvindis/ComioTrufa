@@ -19,9 +19,10 @@ logger = logging.getLogger(__name__)
 
 ANALYSIS_PROMPT = """Sos un sistema de monitoreo del plato de comida de una perrita llamada Trufa.
 
-El plato es metalico/plateado, redondo, sobre piso de ceramica clara. Puede haber un segundo plato al lado (agua, ignoralo).
+El plato de comida es metalico/plateado, redondo, sobre piso de ceramica clara. Esta ubicado a la IZQUIERDA. A la derecha puede haber un segundo plato (agua, ignoralo completamente).
 La comida son croquetas marrones con forma de corazon.
-Las fotos vienen de una ESP32-CAM, pueden tener flash, estar algo oscuras o con tonos irregulares.
+Las fotos vienen de una ESP32-CAM desde arriba, pueden tener flash, estar algo oscuras o con tonos irregulares.
+IMPORTANTE: Puede haber croquetas sueltas en el PISO (fuera del plato). Ignora las que estan en el piso. Solo analiza lo que esta DENTRO del plato de la izquierda.
 
 Analiza la foto y responde SOLO con JSON:
 

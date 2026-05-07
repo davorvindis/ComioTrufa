@@ -233,6 +233,39 @@
         .stat-card .meals { font-size: 30px; font-weight: bold; color: #4ade80; margin: 4px 0; }
         .stat-card .times { font-size: 11px; color: #666; }
 
+        /* Admin */
+        .photo-card .delete-btn {
+            position: absolute;
+            top: 6px; right: 6px;
+            background: rgba(220,38,38,0.8);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 24px; height: 24px;
+            font-size: 14px;
+            cursor: pointer;
+            display: none;
+        }
+        .photo-card:hover .delete-btn { display: block; }
+        .photo-card { position: relative; }
+        .admin-panel {
+            background: #16213e;
+            border-radius: 10px;
+            padding: 14px;
+            margin-bottom: 12px;
+        }
+        .admin-panel h3 { font-size: 14px; margin-bottom: 8px; color: #e94560; }
+        .admin-panel input {
+            background: #0f3460;
+            border: 1px solid #333;
+            color: white;
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 13px;
+            width: 80px;
+        }
+        .admin-panel label { font-size: 12px; color: #888; margin-right: 4px; }
+
         .hidden { display: none; }
         .empty-msg { text-align: center; color: #666; padding: 30px; font-size: 14px; }
         #photoRequest { text-align: center; padding: 8px; color: #fbbf24; font-size: 13px; }
@@ -277,6 +310,7 @@
         <div class="tab active" data-tab="photos" onclick="showTab('photos')">Fotos</div>
         <div class="tab" data-tab="events" onclick="showTab('events')">Eventos</div>
         <div class="tab" data-tab="stats" onclick="showTab('stats')">Semana</div>
+        <div class="tab" data-tab="admin" onclick="showTab('admin')">Admin</div>
     </div>
 
     <div class="content">
@@ -293,6 +327,24 @@
         </div>
         <div id="tab-stats" class="hidden">
             <div class="stats-grid" id="statsGrid"></div>
+        </div>
+        <div id="tab-admin" class="hidden">
+            <div class="admin-panel">
+                <h3>Corregir stats del dia</h3>
+                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px">
+                    <label>Fecha:</label><input type="date" id="adminDate" style="width:140px">
+                    <label>Comidas:</label><input type="number" id="adminMeals" min="0" value="0">
+                    <label>Primera:</label><input type="time" id="adminFirst" style="width:100px">
+                    <label>Ultima:</label><input type="time" id="adminLast" style="width:100px">
+                    <button onclick="saveStats()" class="btn btn-primary" style="font-size:12px">Guardar</button>
+                </div>
+                <div id="adminMsg" style="font-size:12px;color:#4ade80"></div>
+            </div>
+            <div class="admin-panel">
+                <h3>Acciones</h3>
+                <button onclick="resetState()" class="btn btn-secondary" style="font-size:12px">Resetear estado</button>
+                <span style="font-size:11px;color:#666;margin-left:8px">Pone el estado en "desconocido"</span>
+            </div>
         </div>
     </div>
 
@@ -449,6 +501,7 @@
                     try { desc = JSON.parse(r.raw_response || '{}').description || ''; } catch(e) {}
                     return `
                         <div class="photo-card" onclick="openLightbox(${i})">
+                            <button class="delete-btn" onclick="event.stopPropagation();deleteReading(${r.id})" title="Borrar">&times;</button>
                             <img src="${r.image_url}" alt="bowl" loading="lazy"
                                  onerror="this.style.background='#16213e';this.style.height='80px'">
                             <div class="info">
@@ -558,6 +611,39 @@
                 btn.disabled = false;
                 btn.textContent = 'Pedir foto ahora';
             }
+        }
+
+        async function deleteReading(id) {
+            if (!confirm('Borrar esta foto?')) return;
+            await fetch(`/api/reading/${id}`, { method: 'DELETE' });
+            loadPhotos();
+            loadStatus();
+        }
+
+        async function saveStats() {
+            const date = document.getElementById('adminDate').value;
+            if (!date) { alert('Elegí una fecha'); return; }
+            const body = {
+                date: date,
+                meals: parseInt(document.getElementById('adminMeals').value) || 0,
+                first_meal: document.getElementById('adminFirst').value || null,
+                last_meal: document.getElementById('adminLast').value || null,
+                refills: 0,
+            };
+            await fetch('/api/admin/fix-stats', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(body),
+            });
+            document.getElementById('adminMsg').textContent = 'Stats guardadas!';
+            loadStatus();
+            setTimeout(() => document.getElementById('adminMsg').textContent = '', 3000);
+        }
+
+        async function resetState() {
+            if (!confirm('Resetear estado a desconocido?')) return;
+            await fetch('/api/admin/reset-state', { method: 'POST' });
+            loadStatus();
         }
 
         // Init
