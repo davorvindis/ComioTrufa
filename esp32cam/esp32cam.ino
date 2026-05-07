@@ -265,20 +265,23 @@ bool checkPhotoRequest() {
 bool captureAndSend() {
   Serial.println("Capturando foto...");
 
-  // Encender flash LED para iluminar el plato
-  digitalWrite(FLASH_LED_PIN, HIGH);
-  delay(500);  // Dar tiempo a la cámara para ajustar exposición
+  // Encender flash LED a baja potencia (PWM) para no sobreexponer
+  ledcAttach(FLASH_LED_PIN, 5000, 8);  // 5kHz, 8-bit resolution
+  ledcWrite(FLASH_LED_PIN, 30);  // 30/255 = ~12% potencia (suave)
+  delay(500);
 
-  // Descartar frames viejos para que el sensor se adapte a la luz
+  // Descartar frames para que el sensor se adapte
   camera_fb_t *fb = esp_camera_fb_get();
   if (fb) { esp_camera_fb_return(fb); delay(300); }
   fb = esp_camera_fb_get();
   if (fb) { esp_camera_fb_return(fb); delay(300); }
 
-  // Capturar frame bueno (con flash encendido)
+  // Capturar frame bueno
   fb = esp_camera_fb_get();
 
   // Apagar flash
+  ledcWrite(FLASH_LED_PIN, 0);
+  pinMode(FLASH_LED_PIN, OUTPUT);
   digitalWrite(FLASH_LED_PIN, LOW);
 
   if (!fb) {

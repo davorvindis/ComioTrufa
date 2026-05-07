@@ -443,7 +443,7 @@
                     return;
                 }
 
-                currentPhotos = readings;
+                currentPhotos = readings.filter(r => r.confidence >= 0.5);
                 grid.innerHTML = readings.map((r, i) => {
                     let desc = '';
                     try { desc = JSON.parse(r.raw_response || '{}').description || ''; } catch(e) {}

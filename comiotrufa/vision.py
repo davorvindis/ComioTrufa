@@ -21,6 +21,7 @@ ANALYSIS_PROMPT = """Sos un sistema de monitoreo del plato de comida de una perr
 
 El plato es metalico/plateado, redondo, sobre piso de ceramica clara. Puede haber un segundo plato al lado (agua, ignoralo).
 La comida son croquetas marrones con forma de corazon.
+Las fotos vienen de una ESP32-CAM, pueden tener flash, estar algo oscuras o con tonos irregulares.
 
 Analiza la foto y responde SOLO con JSON:
 
@@ -36,7 +37,8 @@ Criterios ESTRICTOS:
 - "empty" = el plato esta vacio, o tiene solo 1-5 croquetas sueltas dispersas en el fondo (sobras que la perrita dejo). Esto cuenta como que YA COMIO.
 - CLAVE: la diferencia entre "food" y "empty" es si parece una porcion servida (agrupadas) vs sobras sueltas (dispersas, pocas).
 - Un plato limpio sin nada es "empty" con confidence alta.
-- Si no se ve el plato claramente, confidence < 0.5
+- Si la foto esta muy sobreexpuesta (blanca/lavada) y no podes ver bien el contenido del plato, usa confidence < 0.5 (no adivines).
+- Si la foto esta oscura pero podes distinguir formas, analiza lo que ves.
 
 kibble_count: "none" si no hay croquetas, "few" si hay 1-10, "many" si hay mas de 10.
 
